@@ -1,33 +1,90 @@
-import 'package:watch_connectivity_platform_interface/watch_connectivity_platform_interface.dart';
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 
 /// Plugin to communicate with Apple Watch and WearOS devices
-class WatchConnectivity extends WatchConnectivityBase {
-  /// Constructor
-  WatchConnectivity() : super(pluginName: 'watch_connectivity');
+class WatchConnectivity {
+  /// The channel for communicating with the plugin's native code
+  final MethodChannel channel;
 
-  /// WearOS: Always true
-  @override
-  Future<bool> get isSupported => super.isSupported;
+  final _messageStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _contextStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
-  /// WearOS: If either the Wear OS or Galaxy Wearable app is installed
-  @override
-  Future<bool> get isPaired => super.isPaired;
+  /// Stream of messages received
+  Stream<Map<String, dynamic>> get messageStream =>
+      _messageStreamController.stream;
 
-  /// WearOS: If any nodes are connected
-  @override
-  Future<bool> get isReachable => super.isReachable;
+  /// Stream of contexts received
+  Stream<Map<String, dynamic>> get contextStream =>
+      _contextStreamController.stream;
 
-  /// Apple Watch: This will only ever contain one map
-  ///
-  /// WearOS: This will contain one map for every node that has sent a context
-  @override
-  Future<List<Map<String, dynamic>>> get receivedApplicationContexts =>
-      super.receivedApplicationContexts;
+  /// Create an instance of [WatchConnectivity]
+  WatchConnectivity() : channel = MethodChannel('watch_connectivity') {
+    channel.setMethodCallHandler(_handle);
+  }
 
-  /// Apple Watch: Start the watch app with a workout session. Currently there
-  /// is no way to configure the session from the phone side.
-  ///
-  /// WearOS: Does nothing
-  @override
-  Future<void> startWatchApp() => super.startWatchApp();
+  Future _handle(MethodCall call) async {
+    switch (call.method) {
+      case 'didReceiveMessage':
+        _messageStreamController.add(Map<String, dynamic>.from(call.arguments));
+        break;
+      case 'didReceiveApplicationContext':
+        _contextStreamController.add(Map<String, dynamic>.from(call.arguments));
+        break;
+      default:
+        throw UnimplementedError('${call.method} not implemented');
+    }
+  }
+
+  /// If watches are supported by the current platform
+  Future<bool> get isSupported async {
+    final supported = await channel.invokeMethod<bool>('isSupported');
+    return supported ?? false;
+  }
+
+  /// If a watch is paired
+  Future<bool> get isPaired async {
+    final paired = await channel.invokeMethod<bool>('isPaired');
+    return paired ?? false;
+  }
+
+  /// If the companion app is reachable
+  Future<bool> get isReachable async {
+    final reachable = await channel.invokeMethod<bool>('isReachable');
+    return reachable ?? false;
+  }
+
+  /// The most recently sent contextual data
+  Future<Map<String, dynamic>> get applicationContext async {
+    final applicationContext =
+        await channel.invokeMapMethod<String, dynamic>('applicationContext');
+    return applicationContext ?? {};
+  }
+
+  /// A dictionary containing the last update data received
+  Future<List<Map<String, dynamic>>> get receivedApplicationContexts async {
+    final receivedApplicationContexts =
+        await channel.invokeListMethod<Map>('receivedApplicationContexts');
+    return receivedApplicationContexts
+            ?.map((e) => e.cast<String, dynamic>())
+            .toList() ??
+        [];
+  }
+
+  /// Send a message to all connected watches
+  Future<void> sendMessage(Map<String, dynamic> message) {
+    return channel.invokeMethod('sendMessage', message);
+  }
+
+  /// Update the application context
+  Future<void> updateApplicationContext(Map<String, dynamic> context) {
+    return channel.invokeMethod('updateApplicationContext', context);
+  }
+
+  /// Start the watch app
+  Future<void> startWatchApp() {
+    return channel.invokeMethod('startWatchApp');
+  }
 }
