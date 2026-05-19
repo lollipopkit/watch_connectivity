@@ -47,8 +47,25 @@ public class WatchConnectivityPlugin: NSObject, FlutterPlugin, WCSessionDelegate
                 result(FlutterError(code: "session_unavailable", message: "WatchConnectivity is not available on this device.", details: nil))
                 return
             }
-            session.sendMessage(message, replyHandler: nil)
-            result(nil)
+            var didComplete = false
+            func completeOnce(_ value: Any?) {
+                DispatchQueue.main.async {
+                    guard !didComplete else {
+                        return
+                    }
+                    didComplete = true
+                    result(value)
+                }
+            }
+            session.sendMessage(
+                message,
+                replyHandler: { _ in
+                    completeOnce(nil)
+                },
+                errorHandler: { error in
+                    completeOnce(FlutterError(code: "message_send_failed", message: error.localizedDescription, details: nil))
+                }
+            )
         case "updateApplicationContext":
             guard let context = call.arguments as? [String: Any] else {
                 result(FlutterError(code: "invalid_arguments", message: "updateApplicationContext expects a dictionary.", details: nil))

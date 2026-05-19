@@ -45,6 +45,13 @@ class _MyAppState extends State<MyApp> {
     initPlatformState();
   }
 
+  @override
+  void dispose() {
+    timer?.cancel();
+    _watch.dispose();
+    super.dispose();
+  }
+
   // Platform messages are asynchronous, so we initialize in an async method.
   void initPlatformState() async {
     _supported = await _watch.isSupported;

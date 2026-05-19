@@ -13,6 +13,7 @@ class WatchConnectivity {
       StreamController<Map<String, dynamic>>.broadcast();
   final _activationStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
+  var _isDisposed = false;
 
   /// Stream of messages received
   Stream<Map<String, dynamic>> get messageStream =>
@@ -32,6 +33,10 @@ class WatchConnectivity {
   }
 
   Future _handle(MethodCall call) async {
+    if (_isDisposed) {
+      return;
+    }
+
     switch (call.method) {
       case 'didReceiveMessage':
         _messageStreamController.add(Map<String, dynamic>.from(call.arguments));
@@ -99,5 +104,17 @@ class WatchConnectivity {
   /// Start the watch app
   Future<void> startWatchApp() {
     return channel.invokeMethod('startWatchApp');
+  }
+
+  /// Release stream controllers and unregister platform callbacks.
+  void dispose() {
+    if (_isDisposed) {
+      return;
+    }
+    _isDisposed = true;
+    channel.setMethodCallHandler(null);
+    _messageStreamController.close();
+    _contextStreamController.close();
+    _activationStreamController.close();
   }
 }
