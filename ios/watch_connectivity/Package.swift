@@ -21,9 +21,7 @@ let package = Package(
                 .product(name: "FlutterFramework", package: "FlutterFramework")
             ],
             resources: [
-                // Uncomment if the privacy manifest starts declaring required
-                // reason APIs or collected data.
-                // .process("PrivacyInfo.xcprivacy"),
+                .process("PrivacyInfo.xcprivacy"),
             ]
         )
     ]

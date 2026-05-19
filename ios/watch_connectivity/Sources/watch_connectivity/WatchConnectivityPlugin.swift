@@ -39,21 +39,52 @@ public class WatchConnectivityPlugin: NSObject, FlutterPlugin, WCSessionDelegate
         case "receivedApplicationContexts":
             result([session?.receivedApplicationContext ?? [:]])
         case "sendMessage":
-            session?.sendMessage(call.arguments as! [String: Any], replyHandler: nil)
+            guard let message = call.arguments as? [String: Any] else {
+                result(FlutterError(code: "invalid_arguments", message: "sendMessage expects a dictionary.", details: nil))
+                return
+            }
+            guard let session else {
+                result(FlutterError(code: "session_unavailable", message: "WatchConnectivity is not available on this device.", details: nil))
+                return
+            }
+            session.sendMessage(message, replyHandler: nil)
             result(nil)
         case "updateApplicationContext":
+            guard let context = call.arguments as? [String: Any] else {
+                result(FlutterError(code: "invalid_arguments", message: "updateApplicationContext expects a dictionary.", details: nil))
+                return
+            }
+            guard let session else {
+                result(FlutterError(code: "session_unavailable", message: "WatchConnectivity is not available on this device.", details: nil))
+                return
+            }
             do {
-                try session?.updateApplicationContext(call.arguments as! [String: Any])
+                try session.updateApplicationContext(context)
                 result(nil)
             } catch {
-                result(FlutterError(code: "Error updating application context", message: error.localizedDescription, details: nil))
+                result(FlutterError(code: "application_context_update_failed", message: error.localizedDescription, details: nil))
             }
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
-    public func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
+    public func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        var arguments: [String: Any] = [
+            "activationState": activationState.rawValue,
+            "isActivated": activationState == .activated,
+        ]
+
+        if let error {
+            NSLog("WatchConnectivity activation failed: %@", error.localizedDescription)
+            arguments["error"] = [
+                "code": "activation_failed",
+                "message": error.localizedDescription,
+            ]
+        }
+
+        channel.invokeMethod("activationDidComplete", arguments: arguments)
+    }
 
     public func sessionDidBecomeInactive(_ session: WCSession) {}
 

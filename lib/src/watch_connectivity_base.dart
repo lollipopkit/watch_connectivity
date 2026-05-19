@@ -11,6 +11,8 @@ class WatchConnectivity {
       StreamController<Map<String, dynamic>>.broadcast();
   final _contextStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final _activationStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// Stream of messages received
   Stream<Map<String, dynamic>> get messageStream =>
@@ -19,6 +21,10 @@ class WatchConnectivity {
   /// Stream of contexts received
   Stream<Map<String, dynamic>> get contextStream =>
       _contextStreamController.stream;
+
+  /// Stream of WatchConnectivity activation updates
+  Stream<Map<String, dynamic>> get activationStream =>
+      _activationStreamController.stream;
 
   /// Create an instance of [WatchConnectivity]
   WatchConnectivity() : channel = MethodChannel('watch_connectivity') {
@@ -32,6 +38,11 @@ class WatchConnectivity {
         break;
       case 'didReceiveApplicationContext':
         _contextStreamController.add(Map<String, dynamic>.from(call.arguments));
+        break;
+      case 'activationDidComplete':
+        _activationStreamController.add(
+          Map<String, dynamic>.from(call.arguments),
+        );
         break;
       default:
         throw UnimplementedError('${call.method} not implemented');
