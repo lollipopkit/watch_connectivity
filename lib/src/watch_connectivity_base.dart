@@ -11,6 +11,9 @@ class WatchConnectivity {
       StreamController<Map<String, dynamic>>.broadcast();
   final _contextStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final _activationStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  var _isDisposed = false;
 
   /// Stream of messages received
   Stream<Map<String, dynamic>> get messageStream =>
@@ -20,18 +23,31 @@ class WatchConnectivity {
   Stream<Map<String, dynamic>> get contextStream =>
       _contextStreamController.stream;
 
+  /// Stream of WatchConnectivity activation updates
+  Stream<Map<String, dynamic>> get activationStream =>
+      _activationStreamController.stream;
+
   /// Create an instance of [WatchConnectivity]
   WatchConnectivity() : channel = MethodChannel('watch_connectivity') {
     channel.setMethodCallHandler(_handle);
   }
 
   Future _handle(MethodCall call) async {
+    if (_isDisposed) {
+      return;
+    }
+
     switch (call.method) {
       case 'didReceiveMessage':
         _messageStreamController.add(Map<String, dynamic>.from(call.arguments));
         break;
       case 'didReceiveApplicationContext':
         _contextStreamController.add(Map<String, dynamic>.from(call.arguments));
+        break;
+      case 'activationDidComplete':
+        _activationStreamController.add(
+          Map<String, dynamic>.from(call.arguments),
+        );
         break;
       default:
         throw UnimplementedError('${call.method} not implemented');
@@ -58,15 +74,17 @@ class WatchConnectivity {
 
   /// The most recently sent contextual data
   Future<Map<String, dynamic>> get applicationContext async {
-    final applicationContext =
-        await channel.invokeMapMethod<String, dynamic>('applicationContext');
+    final applicationContext = await channel.invokeMapMethod<String, dynamic>(
+      'applicationContext',
+    );
     return applicationContext ?? {};
   }
 
   /// A dictionary containing the last update data received
   Future<List<Map<String, dynamic>>> get receivedApplicationContexts async {
-    final receivedApplicationContexts =
-        await channel.invokeListMethod<Map>('receivedApplicationContexts');
+    final receivedApplicationContexts = await channel.invokeListMethod<Map>(
+      'receivedApplicationContexts',
+    );
     return receivedApplicationContexts
             ?.map((e) => e.cast<String, dynamic>())
             .toList() ??
@@ -86,5 +104,17 @@ class WatchConnectivity {
   /// Start the watch app
   Future<void> startWatchApp() {
     return channel.invokeMethod('startWatchApp');
+  }
+
+  /// Release stream controllers and unregister platform callbacks.
+  void dispose() {
+    if (_isDisposed) {
+      return;
+    }
+    _isDisposed = true;
+    channel.setMethodCallHandler(null);
+    _messageStreamController.close();
+    _contextStreamController.close();
+    _activationStreamController.close();
   }
 }
