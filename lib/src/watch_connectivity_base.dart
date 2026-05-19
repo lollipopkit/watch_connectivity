@@ -58,15 +58,17 @@ class WatchConnectivity {
 
   /// The most recently sent contextual data
   Future<Map<String, dynamic>> get applicationContext async {
-    final applicationContext =
-        await channel.invokeMapMethod<String, dynamic>('applicationContext');
+    final applicationContext = await channel.invokeMapMethod<String, dynamic>(
+      'applicationContext',
+    );
     return applicationContext ?? {};
   }
 
   /// A dictionary containing the last update data received
   Future<List<Map<String, dynamic>>> get receivedApplicationContexts async {
-    final receivedApplicationContexts =
-        await channel.invokeListMethod<Map>('receivedApplicationContexts');
+    final receivedApplicationContexts = await channel.invokeListMethod<Map>(
+      'receivedApplicationContexts',
+    );
     return receivedApplicationContexts
             ?.map((e) => e.cast<String, dynamic>())
             .toList() ??

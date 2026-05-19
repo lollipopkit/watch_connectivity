@@ -4,14 +4,13 @@ import 'package:flutter/material.dart';
 
 import 'package:watch_connectivity/watch_connectivity.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -35,11 +34,13 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
 
-    _watch.messageStream
-        .listen((e) => setState(() => _log.add('Received message: $e')));
+    _watch.messageStream.listen(
+      (e) => setState(() => _log.add('Received message: $e')),
+    );
 
-    _watch.contextStream
-        .listen((e) => setState(() => _log.add('Received context: $e')));
+    _watch.contextStream.listen(
+      (e) => setState(() => _log.add('Received context: $e')),
+    );
 
     initPlatformState();
   }
@@ -111,9 +112,7 @@ class _MyAppState extends State<MyApp> {
       ),
     );
 
-    return MaterialApp(
-      home: home,
-    );
+    return MaterialApp(home: home);
   }
 
   void sendMessage() {
